@@ -1,2 +1,7 @@
+#local
 .env
-__pycache__/*
+.vscode
+
+# cache
+__pycache__
+.mypy_cache
