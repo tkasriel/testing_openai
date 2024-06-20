@@ -14,7 +14,7 @@ def mock_gpt():
     return gpt
 
 
-def test_message_response(mock_gpt):    
+def test_message_response(mock_gpt):
     mock_gpt.send_message("I like fish")
 
     create = mock_gpt.client.chat.completions.create
