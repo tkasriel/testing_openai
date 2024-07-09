@@ -1,32 +1,33 @@
 import base64
-from openai import OpenAI
-from openai.types.chat import ChatCompletionMessageParam, ChatCompletionMessage
+import typing
+from openai import AsyncOpenAI, OpenAI
+from openai.types.chat import ChatCompletionMessageParam, ChatCompletionMessage, ChatCompletion
 
 
 class GPT:
 	def __init__(self) -> None:
-		self.client = OpenAI()
+		self.client: AsyncOpenAI = AsyncOpenAI()
 		self.convo: list[ChatCompletionMessageParam] = []
 
-	def send_message(self, message: str) -> str:
+	async def send_message(self, message: str) -> str:
 		"""Send text message to GPT-4o"""
 		dict_message: list[ChatCompletionMessageParam] = [
 			{"role": "user", "content": message}
 		]
-		response = self.client.chat.completions.create(
-			model="gpt-4o",
-			messages=dict_message + self.convo,
-			temperature=0
-		)
+		response = await self.client.chat.completions.create(
+				model="gpt-4o",
+				messages=dict_message + self.convo,
+				temperature=0
+			)
 		response_message = response.choices[0].message
 		self._save_message(response_message)
 		return response_message.content or ""
 	
-	def send_image(self, image_filename: str, caption: str | None = None) -> str:
+	async def send_image(self, image_filename: str, caption: str | None = None) -> str:
 		"""Send image with optional caption to GPT-4o"""
-		return self.send_images([image_filename], caption)
+		return await self.send_images([image_filename], caption)
 
-	def send_images(self, image_filenames: list[str], caption: str | None = None) -> str:
+	async def send_images(self, image_filenames: list[str], caption: str | None = None) -> str:
 		"""Send images with optional caption to GPT-4o"""
 
 		base64_images = [self._encode_image(image_filename) for image_filename in image_filenames]
@@ -50,11 +51,11 @@ class GPT:
 						"detail": "high",
 					},
 				})
-		response = self.client.chat.completions.create(
-			model="gpt-4o",
-			messages=message + self.convo,
-			temperature=0
-		)
+		response = await self.client.chat.completions.create(
+				model="gpt-4o",
+				messages=message + self.convo,
+				temperature=0
+			)
 		response_message = response.choices[0].message
 		self._save_message(response_message)
 		return response_message.content or ""

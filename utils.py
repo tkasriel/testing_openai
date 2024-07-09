@@ -1,5 +1,9 @@
+import base64
+from io import BytesIO
 from PIL import Image, ImageDraw, ImageFont
 from typing import Tuple
+import PIL
+import cv2
 
 def combine_images_horizontally(
     img1_path: str, 
@@ -40,7 +44,7 @@ def combine_images_horizontally(
     try:
         font = ImageFont.truetype("arial.ttf", 300)
     except IOError:
-        font = ImageFont.load_default(300)
+        font = ImageFont.load_default(80)
 
     # Create a draw object
     draw = ImageDraw.Draw(combined_img)
@@ -52,8 +56,8 @@ def combine_images_horizontally(
         draw.rectangle(text_bbox, fill="white")
         draw.text((x, y), text, font=font, fill="black")
 
-    draw_label(draw, (10, 10), "1")
-    draw_label(draw, (width1 + 10, 10), "2")
+    draw_label(draw, (10, 0), "1")
+    draw_label(draw, (width1 + 10, 0), "2")
 
     # Save the combined image
     combined_img.save(output_path)
@@ -97,14 +101,15 @@ def combine_images_four(image_paths, output_path):
         try:
             font = ImageFont.truetype("arial.ttf", 200)
         except IOError:
-            font = ImageFont.load_default(200)
+            font = ImageFont.load_default(400)
 
         # Calculate the bounding box for the text
-        text_position = (pos[0] + 10, pos[1] + 10)
+        text_position = (pos[0] + 40, pos[1] + 40)
         bbox = draw.textbbox(text_position, label, font=font)
-        
+        bbox = (bbox[0] - 50, bbox[1] - 50, bbox[2] + 50, bbox[3] + 50)
+
         # Draw white rectangle behind the label
-        draw.rectangle(bbox, fill="white")
+        draw.rectangle(bbox, fill="white", outline="black", width=10)
         
         # Draw the label
         draw.text(text_position, label, fill="black", font=font)
@@ -155,3 +160,56 @@ def combine_images_three(image_paths, output_path):
     # Save the combined image
     combined_image.save(output_path)
     print(f"Combined image saved as {output_path}")
+
+def draw_arrows_on_image(input_file_path, output_file_path, arrow_length=300, label_offset=50):
+    # Read the input image
+    image = cv2.imread(input_file_path)
+
+    # Check if the image was loaded correctly
+    if image is None:
+        raise FileNotFoundError(f"The image at {input_file_path} could not be loaded.")
+    
+    # Get the image dimensions
+    height, width, _ = image.shape
+
+    # Define the start point in the bottom left
+    start_point = (150 + arrow_length, height - (150 + arrow_length))
+
+    # Define the directions and their corresponding labels
+    directions = {
+        'A': (0, -arrow_length),    # Up
+        'B': (arrow_length, -arrow_length),  # Up-Right
+        'C': (arrow_length, 0),     # Right
+        'D': (arrow_length, arrow_length),   # Down-Right
+        'E': (0, arrow_length),     # Down
+        'F': (-arrow_length, arrow_length),  # Down-Left
+        'G': (-arrow_length, 0),    # Left
+        'H': (-arrow_length, -arrow_length)  # Up-Left
+    }
+
+    # Determine the size of the rectangle based on arrow lengths
+    rect_width = arrow_length * 2 + label_offset * 2
+    rect_height = arrow_length * 2 + label_offset * 2
+
+    # Draw a white rectangle as the background for the arrows and labels
+    cv2.rectangle(image, (start_point[0] - arrow_length - label_offset, start_point[1] - arrow_length - label_offset), 
+                  (start_point[0] + arrow_length + label_offset, start_point[1] + arrow_length + label_offset), (255, 255, 255), -1)
+
+    # Draw the arrows and labels
+    for label, (dx, dy) in directions.items():
+        end_point = (start_point[0] + dx, start_point[1] + dy)
+        image = cv2.arrowedLine(image, start_point, end_point, (0, 0, 0), 2, tipLength=0.3)
+        label_position = (end_point[0] + dx // 5, end_point[1] + dy // 5)
+        image = cv2.putText(image, label, label_position, cv2.FONT_HERSHEY_SIMPLEX, 5, (0, 0, 0), 2)
+
+    # Save the image to the specified file path
+    cv2.imwrite(output_file_path, image)
+
+def encode_image(image: Image.Image):
+    buffered = BytesIO()
+    image.save(buffered, format='JPEG')
+    return base64.b64encode(buffered.getvalue()).decode('utf-8')
+
+def encode_file(image_file: str):
+    image = Image.open(image_file)
+    return encode_image(image)
